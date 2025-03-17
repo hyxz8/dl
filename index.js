@@ -39,7 +39,7 @@ app.use(
       });
       
       // 强制设置固定 User-Agent（伪装浏览器类型）
-      filteredHeaders['User-Agent'] = 'AnonymizedProxy/1.0';
+      filteredHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0';
       
       return filteredHeaders;
     },
