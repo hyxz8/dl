@@ -1,37 +1,63 @@
 const express = require('express');
-const axios = require('axios');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
+// 硬编码目标 API 地址（请替换为实际地址）
+const TARGET_API = 'https://generativelanguage.googleapis.com'; 
+
+// 需要过滤的隐私请求头字段（大小写不敏感）
+const blockedHeaders = [
+  'x-forwarded-for',
+  'via',
+  'accept-language',
+  'origin',
+  'referer',
+  'user-agent',
+  'x-real-ip',
+  'x-client-ip',
+  'cf-connecting-ip',
+  'dnt' // Do Not Track 标头
+];
+
 const app = express();
 
-const PORT = 3000;
-const TARGET_URL = 'https://generativelanguage.googleapis.com';
-const ALLOWED_HEADERS = ['authorization', 'content-type'];
-
-app.use(express.json());  
-
-app.use('*', async (req, res) => {
-    try {
-        const config = {
-            method: req.method,
-            url: `${TARGET_URL}${req.url}`,
-            headers: {},
-            data: req.method === 'POST' ? req.body : null,
-            params: req.method === 'GET' ? req.query : null
-        };
-
-        for (const header in req.headers) {
-            if (ALLOWED_HEADERS.includes(header.toLowerCase())) {
-                config.headers[header] = req.headers[header];
-            }
-        }
-
-        const response = await axios(config);
-
-        res.status(response.status).json(response.data);
-    } catch (error) {
-        res.status(500).json({ error: 'Proxy request failed', details: error.message });
+// 反向代理中间件配置
+app.use(
+  '/**', // 代理所有路径（按需替换为特定路径前缀）
+  createProxyMiddleware({
+    target: TARGET_API,
+    changeOrigin: true, // 修改请求头中的 Host 字段为目标 API 地址
+    headers: (proxyReqHeaders, req) => {
+      // 过滤敏感请求头
+      const filteredHeaders = { ...proxyReqHeaders };
+      blockedHeaders.forEach(hdr => {
+        // 遍历检测所有与被禁用头部对应的键（不论大小写）
+        Object.entries(filteredHeaders).forEach(([key, _]) => {
+          if (key.toLowerCase() === hdr.toLowerCase()) {
+            delete filteredHeaders[key];
+          }
+        });
+      });
+      
+      // 强制设置固定 User-Agent（伪装浏览器类型）
+      filteredHeaders['User-Agent'] = 'AnonymizedProxy/1.0';
+      
+      return filteredHeaders;
+    },
+    // 配置错误处理
+    onProxyRes: (proxyRes, req, res) => {
+      // 可选：过滤 API 的响应头（如移除 X-Powered-By 等信息）
+      blockedHeaders.forEach(hdr => {
+        delete proxyRes.headers[hdr];
+      });
+    },
+    onError: (err, req, res) => {
+      res.status(500).send(`Proxy Error: ${err.message}`);
     }
-});
+  })
+);
 
+// 启动监听
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Reverse proxy server running on port ${PORT}`);
+  console.log(`Proxy server started on http://localhost:${PORT}`);
 });
