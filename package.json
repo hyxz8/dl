@@ -1,17 +1,11 @@
 {
-  "name": "api-proxy",
+  "name": "simple-node-server",
   "version": "1.0.0",
-  "main": "index.js",
-  "type": "module", // 新增：启用 ES 模块语法
+  "description": "A minimal Node.js server that returns '1234'",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js" // 开发时使用 nodemon 自动重启
+    "start": "node server.js"
   },
-  "dependencies": {
-    "express": "^4.18.2",
-    "http-proxy-middleware": "^2.0.6"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2" // 开发环境依赖，可选
-  }
+  "author": "",
+  "license": "ISC"
 }
